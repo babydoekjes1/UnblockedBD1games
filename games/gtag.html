@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gorilla Tag Web Prototype - Arena Boundaries & Countdown</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      user-select: none;
+      background: #1a1a1a;
+    }
+    /* Menu Styles */
+    .menu-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 15, 25, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      color: white;
+    }
+    .menu-panel {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      width: 320px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      margin: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 80%;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.secondary {
+      background: #2196F3;
+    }
+    button.secondary:hover {
+      background: #1e87db;
+    }
+    .option-group {
+      margin: 12px 0;
+      text-align: left;
+    }
+    .option-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    select, input[type="color"] {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #2a2a3a;
+      color: white;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    /* HUD Overlay */
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 15px;
+      border-radius: 8px;
+      pointer-events: none;
+      display: none;
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+    }
+    #health-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+    }
+    #health-bar {
+      width: 100%;
+      height: 100%;
+      background-color: #ff4d4d;
+      transition: width 0.3s;
+    }
+    /* Countdown Banner */
+    #countdown-banner {
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 64px;
+      font-weight: bold;
+      color: #ffcc00;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+      z-index: 50;
+      display: none;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Menu -->
+  <div id="main-menu" class="menu-screen">
+    <div class="menu-panel">
+      <h1>🦍 GORILLA TAG</h1>
+      <button id="btn-start">Play Game</button>
+      <button id="btn-customize" class="secondary">Customize</button>
+    </div>
+  </div>
+
+  <!-- Customize Menu -->
+  <div id="custom-menu" class="menu-screen" style="display: none;">
+    <div class="menu-panel">
+      <h2>Cosmetic Wardrobe</h2>
+      
+      <div class="option-group">
+        <label for="color-picker">Fur Color:</label>
+        <input type="color" id="color-picker" value="#d61809">
+      </div>
+
+      <div class="option-group">
+        <label for="select-hat">Hat:</label>
+        <select id="select-hat">
+          <option value="tophat">Top Hat</option>
+          <option value="party">Party Hat</option>
+          <option value="sweatband">Sweatband</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+
+      <div class="option-group">
+        <label for="select-shirt">Shirt / Accessory:</label>
+        <select id="select-shirt">
+          <option value="jacket">Jacket</option>
+          <option value="suit">Black Suit</option>
+          <option value="bowtie">Bowtie</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+
+      <div class="option-group">
+        <label for="select-face">Face:</label>
+        <select id="select-face">
+          <option value="sunglasses">Sunglasses</option>
+          <option value="cheeks">Rosy Cheeks</option>
+          <option value="mask">Mask</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+
+      <button id="btn-back">Done</button>
+    </div>
+  </div>
+
+  <!-- HUD Overlay -->
+  <div id="ui">
+    <h2>🦍 Gorilla Tag</h2>
+    <p><b>W, A, S, D:</b> Move / Walk</p>
+    <p><b>Mouse:</b> Rotate camera</p>
+    <p><b>Spacebar:</b> Jump / Climb Trees</p>
+    <p><b>Shift:</b> Climb Down</p>
+  </div>
+  <div id="crosshair"></div>
+  <div id="health-container">
+    <div id="health-bar"></div>
+  </div>
+  <div id="countdown-banner">3</div>
+
+  <!-- Import Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <script>
+    let gameState = 'MENU';
+    let countdownTimer = 3.9; // Starting countdown time
+
+    const mainMenu = document.getElementById('main-menu');
+    const customMenu = document.getElementById('custom-menu');
+    const hudUI = document.getElementById('ui');
+    const crosshair = document.getElementById('crosshair');
+    const healthContainer = document.getElementById('health-container');
+    const countdownBanner = document.getElementById('countdown-banner');
+
+    document.getElementById('btn-start').addEventListener('click', startGame);
+    document.getElementById('btn-customize').addEventListener('click', () => {
+      mainMenu.style.display = 'none';
+      customMenu.style.display = 'flex';
+      gameState = 'CUSTOMIZE';
+    });
+    document.getElementById('btn-back').addEventListener('click', () => {
+      customMenu.style.display = 'none';
+      mainMenu.style.display = 'flex';
+      gameState = 'MENU';
+    });
+
+    function startGame() {
+      mainMenu.style.display = 'none';
+      customMenu.style.display = 'none';
+      hudUI.style.display = 'block';
+      crosshair.style.display = 'block';
+      healthContainer.style.display = 'block';
+      countdownBanner.style.display = 'block';
+      
+      gameState = 'COUNTDOWN';
+      countdownTimer = 3.9;
+      
+      player.health = 100;
+      player.position.set(0, 1.6, 0);
+      player.velocity.set(0, 0, 0);
+      
+      // Reset enemies to starting locations
+      for (let i = 0; i < enemies.length; i++) {
+        enemies[i].model.position.set((i - 1.5) * 8, 0, -15);
+        enemies[i].velocityY = 0;
+      }
+
+      document.body.requestPointerLock();
+    }
+
+    function returnToMenu() {
+      gameState = 'MENU';
+      document.exitPointerLock();
+      hudUI.style.display = 'none';
+      crosshair.style.display = 'none';
+      healthContainer.style.display = 'none';
+      countdownBanner.style.display = 'none';
+      mainMenu.style.display = 'flex';
+    }
+
+    // --- Scene Setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 10, 80);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    sunLight.position.set(20, 40, 20);
+    sunLight.castShadow = true;
+    scene.add(sunLight);
+
+    const groundGeo = new THREE.PlaneGeometry(200, 200);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // --- Arena Boundary Walls ---
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x4a3525, roughness: 0.8 });
+    const mapSize = 180;
+    const wallHeight = 12;
+    const wallThickness = 4;
+
+    function createBoundaryWall(x, z, width, depth) {
+      const wallGeo = new THREE.BoxGeometry(width, wallHeight, depth);
+      const wall = new THREE.Mesh(wallGeo, wallMat);
+      wall.position.set(x, wallHeight / 2, z);
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      scene.add(wall);
+    }
+    // North, South, West, East outer perimeter walls
+    createBoundaryWall(0, -mapSize / 2, mapSize, wallThickness);
+    createBoundaryWall(0, mapSize / 2, mapSize, wallThickness);
+    createBoundaryWall(-mapSize / 2, 0, wallThickness, mapSize);
+    createBoundaryWall(mapSize / 2, 0, wallThickness, mapSize);
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0xa0522d, roughness: 0.6 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.9 });
+    const logMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.8 });
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xff4500 });
+    const rampMat = new THREE.MeshStandardMaterial({ color: 0x734222, roughness: 0.7 });
+
+    const treeGeo = new THREE.CylinderGeometry(0.8, 1.2, 14, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+    const leavesGeo = new THREE.ConeGeometry(4.5, 9, 8);
+    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1e5631 });
+
+    const trees = [];
+    for (let i = 0; i < 35; i++) {
+      const x = (Math.random() - 0.5) * 130;
+      const z = (Math.random() - 0.5) * 130;
+      if (Math.abs(x) < 14 && Math.abs(z) < 16) continue;
+
+      const trunk = new THREE.Mesh(treeGeo, trunkMat);
+      trunk.position.set(x, 7, z);
+      trunk.castShadow = true;
+      scene.add(trunk);
+
+      const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+      leaves.position.set(x, 16, z);
+      leaves.castShadow = true;
+      scene.add(leaves);
+
+      trees.push({ x: x, z: z, minY: 0, maxY: 14, radius: 1.4, climbRadius: 1.8 });
+    }
+
+    const surfaces = [];
+
+    function addFlatSurface(x, z, topY, sizeX, sizeZ) {
+      surfaces.push({ type: 'flat', x, z, topY, sizeX, sizeZ });
+    }
+
+    function addRamp(x1, z1, y1, x2, z2, y2, width = 3) {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const length = Math.hypot(dx, dz);
+      const dy = y2 - y1;
+      const angleY = Math.atan2(dx, dz);
+      const anglePitch = Math.atan2(dy, length);
+
+      const rampGeo = new THREE.BoxGeometry(width, 0.4, length);
+      const ramp = new THREE.Mesh(rampGeo, rampMat);
+      
+      ramp.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
+      ramp.rotation.y = angleY;
+      ramp.rotation.x = anglePitch;
+      ramp.receiveShadow = true;
+      ramp.castShadow = true;
+      scene.add(ramp);
+
+      surfaces.push({ type: 'ramp', x1, z1, y1, x2, z2, y2, width, length });
+    }
+
+    const crateGeo = new THREE.BoxGeometry(2, 2, 2);
+    const cratePositions = [
+      [-6, 1, 8], [-4, 1, 9], [-5, 3, 8.5],
+      [10, 1, -12], [12, 1, -10], [11, 3, -11],
+      [-15, 1, -15], [-13, 1, -15], [-14, 3, -15],
+      [18, 1, 15], [18, 1, 17], [18, 3, 16],
+      [5, 1, 18], [6, 1, 20], [-18, 1, 5]
+    ];
+    for (const pos of cratePositions) {
+      const crate = new THREE.Mesh(crateGeo, crateMat);
+      crate.position.set(pos[0], pos[1], pos[2]);
+      crate.castShadow = true;
+      crate.receiveShadow = true;
+      scene.add(crate);
+      addFlatSurface(pos[0], pos[2], pos[1] + 1, 2, 2);
+    }
+
+    function buildStructure(x, z, size = 7, height = 6) {
+      const pillarGeo = new THREE.CylinderGeometry(0.3, 0.3, height, 8);
+      const halfS = size / 2 - 0.5;
+      const offsets = [[-halfS, -halfS], [halfS, -halfS], [-halfS, halfS], [halfS, halfS]];
+      for (const off of offsets) {
+        const pillar = new THREE.Mesh(pillarGeo, woodMat);
+        pillar.position.set(x + off[0], height / 2, z + off[1]);
+        pillar.castShadow = true;
+        scene.add(pillar);
+      }
+      const floorGeo = new THREE.BoxGeometry(size, 0.4, size);
+      const floor = new THREE.Mesh(floorGeo, woodMat);
+      floor.position.set(x, height, z);
+      floor.receiveShadow = true;
+      scene.add(floor);
+      addFlatSurface(x, z, height + 0.2, size, size);
+
+      const roofGeo = new THREE.ConeGeometry(size * 0.8, 3, 4);
+      roofGeo.rotateY(Math.PI / 4);
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.set(x, height + 1.7, z);
+      scene.add(roof);
+    }
+
+    buildStructure(0, -25, 7, 6);
+    buildStructure(-25, 20, 8, 7);
+    buildStructure(25, -20, 6, 5);
+
+    function buildBridge(x1, z1, x2, z2, y) {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const len = Math.hypot(dx, dz);
+      const angle = Math.atan2(dx, dz);
+
+      const bridgeGeo = new THREE.BoxGeometry(3, 0.4, len);
+      const bridge = new THREE.Mesh(bridgeGeo, woodMat);
+      bridge.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+      bridge.rotation.y = angle;
+      bridge.receiveShadow = true;
+      scene.add(bridge);
+
+      addFlatSurface((x1 + x2) / 2, (z1 + z2) / 2, y + 0.2, len, 3);
+    }
+
+    buildBridge(0, -25, -25, 20, 6);
+    buildBridge(0, -25, 15, -10, 6);
+    buildBridge(25, -20, 10, -12, 5);
+
+    addRamp(0, -12, 0, 0, -21.5, 6, 3.2);
+    addRamp(-25, 5, 0, -25, 16, 7, 3.2);
+    addRamp(25, -5, 0, 25, -17, 5, 3.2);
+    addRamp(-5, 0, 0, -5, 7.5, 2, 2.5);
+
+    function buildCampfire(x, z) {
+      const stoneGeo = new THREE.DodecahedronGeometry(0.35);
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const stone = new THREE.Mesh(stoneGeo, stoneMat);
+        stone.position.set(x + Math.cos(angle) * 1.2, 0.2, z + Math.sin(angle) * 1.2);
+        stone.castShadow = true;
+        scene.add(stone);
+      }
+
+      const logGeo = new THREE.CylinderGeometry(0.15, 0.15, 1.8);
+      for (let i = 0; i < 3; i++) {
+        const log = new THREE.Mesh(logGeo, logMat);
+        log.rotation.z = Math.PI / 3;
+        log.rotation.y = (i / 3) * Math.PI;
+        log.position.set(x, 0.3, z);
+        log.castShadow = true;
+        scene.add(log);
+      }
+
+      const fireGeo = new THREE.ConeGeometry(0.6, 1.4, 6);
+      const fire = new THREE.Mesh(fireGeo, flameMat);
+      fire.position.set(x, 1.0, z);
+      scene.add(fire);
+
+      const fireLight = new THREE.PointLight(0xff6600, 3, 18);
+      fireLight.position.set(x, 1.2, z);
+      scene.add(fireLight);
+
+      return { fireMesh: fire, light: fireLight };
+    }
+    const campfire = buildCampfire(0, 5);
+
+    // Completely continuous elevation check to prevent any jumping or snapping glitches
+    function getElevationAt(x, z, currentY) {
+      let targetY = 0;
+
+      for (const s of surfaces) {
+        if (s.type === 'flat') {
+          if (x >= s.x - s.sizeX / 2 && x <= s.x + s.sizeX / 2 &&
+              z >= s.z - s.sizeZ / 2 && z <= s.z + s.sizeZ / 2) {
+            if (currentY >= s.topY - 1.2) {
+              targetY = Math.max(targetY, s.topY);
+            }
+          }
+        } else if (s.type === 'ramp') {
+          const minX = Math.min(s.x1, s.x2) - s.width;
+          const maxX = Math.max(s.x1, s.x2) + s.width;
+          const minZ = Math.min(s.z1, s.z2) - s.width;
+          const maxZ = Math.max(s.z1, s.z2) + s.width;
+
+          if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            const dx = s.x2 - s.x1;
+            const dz = s.z2 - s.z1;
+            const lenSq = dx * dx + dz * dz;
+            let t = ((x - s.x1) * dx + (z - s.z1) * dz) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+
+            const rampX = s.x1 + t * dx;
+            const rampZ = s.z1 + t * dz;
+            const distFromLine = Math.hypot(x - rampX, z - rampZ);
+
+            if (distFromLine <= s.width / 2) {
+              const rampY = s.y1 + t * (s.y2 - s.y1);
+              if (currentY >= rampY - 1.2) {
+                targetY = Math.max(targetY, rampY);
+              }
+            }
+          }
+        }
+      }
+      return targetY;
+    }
+
+    const furMaterial = new THREE.MeshStandardMaterial({ color: 0xd61809, roughness: 0.8 });
+    const cosmeticGroups = { hat: new THREE.Group(), shirt: new THREE.Group(), face: new THREE.Group() };
+
+    function createCustomizablePlayer() {
+      const monke = new THREE.Group();
+
+      const bodyGeo = new THREE.BoxGeometry(0.8, 1.0, 0.6);
+      const body = new THREE.Mesh(bodyGeo, furMaterial);
+      body.position.y = 0.8;
+      monke.add(body);
+
+      const headGeo = new THREE.BoxGeometry(0.72, 0.72, 0.68);
+      const head = new THREE.Mesh(headGeo, furMaterial);
+      head.position.set(0, 1.66, 0);
+      monke.add(head);
+
+      const snoutMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.4 });
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.12), snoutMat);
+      snout.position.set(0, 1.58, 0.34);
+      monke.add(snout);
+
+      const armGeo = new THREE.BoxGeometry(0.26, 0.8, 0.26);
+      const leftArm = new THREE.Mesh(armGeo, furMaterial);
+      leftArm.position.set(-0.6, 0.8, 0);
+      monke.add(leftArm);
+
+      const rightArm = new THREE.Mesh(armGeo, furMaterial);
+      rightArm.position.set(0.6, 0.8, 0);
+      monke.add(rightArm);
+
+      monke.add(cosmeticGroups.hat);
+      monke.add(cosmeticGroups.shirt);
+      monke.add(cosmeticGroups.face);
+
+      return monke;
+    }
+
+    function buildHat(type) {
+      cosmeticGroups.hat.clear();
+      if (type === 'none') return;
+
+      if (type === 'tophat') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.04, 24), mat);
+        brim.position.set(0, 2.04, 0);
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.44, 0.75, 24), mat);
+        crown.position.set(0, 2.45, 0);
+        cosmeticGroups.hat.add(brim, crown);
+      } else if (type === 'party') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0xff007f });
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 16), mat);
+        cone.position.set(0, 2.4, 0);
+        cosmeticGroups.hat.add(cone);
+      } else if (type === 'sweatband') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const band = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.12, 0.72), mat);
+        band.position.set(0, 1.85, 0);
+        cosmeticGroups.hat.add(band);
+      }
+    }
+
+    function buildShirt(type) {
+      cosmeticGroups.shirt.clear();
+      if (type === 'none') return;
+
+      if (type === 'jacket') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x221c18 });
+        const jacket = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.05, 0.66), mat);
+        jacket.position.y = 0.82;
+        
+        const sleeveGeo = new THREE.BoxGeometry(0.32, 0.8, 0.32);
+        const leftSleeve = new THREE.Mesh(sleeveGeo, mat);
+        leftSleeve.position.set(-0.6, 0.8, 0);
+        const rightSleeve = new THREE.Mesh(sleeveGeo, mat);
+        rightSleeve.position.set(0.6, 0.8, 0);
+
+        cosmeticGroups.shirt.add(jacket, leftSleeve, rightSleeve);
+      } else if (type === 'suit') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const suit = new THREE.Mesh(new THREE.BoxGeometry(0.88, 1.05, 0.65), mat);
+        suit.position.y = 0.82;
+
+        const sleeveGeo = new THREE.BoxGeometry(0.32, 0.8, 0.32);
+        const leftSleeve = new THREE.Mesh(sleeveGeo, mat);
+        leftSleeve.position.set(-0.6, 0.8, 0);
+        const rightSleeve = new THREE.Mesh(sleeveGeo, mat);
+        rightSleeve.position.set(0.6, 0.8, 0);
+
+        const shirtInner = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.05), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        shirtInner.position.set(0, 1.0, 0.33);
+
+        const tie = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.02), new THREE.MeshBasicMaterial({ color: 0xcc0000 }));
+        tie.position.set(0, 0.95, 0.35);
+
+        cosmeticGroups.shirt.add(suit, leftSleeve, rightSleeve, shirtInner, tie);
+      } else if (type === 'bowtie') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
+        const bow = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.1), mat);
+        bow.position.set(0, 1.3, 0.33);
+        cosmeticGroups.shirt.add(bow);
+      }
+    }
+
+    function buildFace(type) {
+      cosmeticGroups.face.clear();
+      if (type === 'none') return;
+
+      if (type === 'sunglasses') {
+        const mat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        const glasses = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.18, 0.04), mat);
+        glasses.position.set(0, 1.73, 0.37);
+        cosmeticGroups.face.add(glasses);
+      } else if (type === 'cheeks') {
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff6699 });
+        const cheekL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), mat);
+        cheekL.position.set(-0.25, 1.55, 0.35);
+        const cheekR = cheekL.clone();
+        cheekR.position.x = 0.25;
+        cosmeticGroups.face.add(cheekL, cheekR);
+      } else if (type === 'mask') {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x3366cc });
+        const mask = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.3, 0.12), mat);
+        mask.position.set(0, 1.52, 0.35);
+        cosmeticGroups.face.add(mask);
+      }
+    }
+
+    const playerModel = createCustomizablePlayer();
+    scene.add(playerModel);
+
+    buildHat('tophat');
+    buildShirt('jacket');
+    buildFace('sunglasses');
+
+    document.getElementById('color-picker').addEventListener('input', (e) => {
+      furMaterial.color.set(e.target.value);
+    });
+    document.getElementById('select-hat').addEventListener('change', (e) => buildHat(e.target.value));
+    document.getElementById('select-shirt').addEventListener('change', (e) => buildShirt(e.target.value));
+    document.getElementById('select-face').addEventListener('change', (e) => buildFace(e.target.value));
+
+    const player = {
+      position: new THREE.Vector3(0, 1.6, 0),
+      velocity: new THREE.Vector3(0, 0, 0),
+      height: 1.6,
+      onGround: false,
+      isClimbing: false,
+      health: 100
+    };
+
+    const keys = { KeyW: false, KeyS: false, KeyA: false, KeyD: false, Space: false, ShiftLeft: false, ShiftRight: false };
+
+    document.body.addEventListener('click', () => {
+      if (gameState === 'PLAYING' || gameState === 'COUNTDOWN') {
+        document.body.requestPointerLock();
+      }
+    });
+
+    let yaw = 0;
+    let pitch = 0.2;
+
+    document.addEventListener('mousemove', (e) => {
+      if ((gameState === 'PLAYING' || gameState === 'COUNTDOWN') && document.pointerLockElement === document.body) {
+        yaw -= e.movementX * 0.002;
+        pitch -= e.movementY * 0.002;
+        pitch = Math.max(-0.2, Math.min(Math.PI / 3, pitch));
+      }
+    });
+
+    window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.code)) keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.code)) keys[e.code] = false; });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function createBotModel(colorHex) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex });
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.6), mat);
+      body.position.y = 0.8;
+      group.add(body);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), mat);
+      head.position.y = 1.6;
+      group.add(head);
+      return group;
+    }
+
+    const enemies = [];
+    const botColors = [0x1976d2, 0x388e3c, 0xfbc02d, 0x8e24aa];
+    for (let i = 0; i < botColors.length; i++) {
+      const bot = createBotModel(botColors[i]);
+      bot.position.set((i - 1.5) * 8, 0, -15);
+      scene.add(bot);
+      enemies.push({ 
+        model: bot, 
+        speed: 10 + i * 1.2,
+        climbSpeed: 9 + i,
+        velocityY: 0,
+        isClimbing: false
+      });
+    }
+
+    const clock = new THREE.Clock();
+    const speed = 18;
+    const climbSpeed = 10;
+    const jumpForce = 12;
+    const gravity = -28;
+    const cameraDistance = 5.5;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.1);
+      const time = clock.getElapsedTime();
+
+      campfire.light.intensity = 2.5 + Math.sin(time * 12) * 0.5;
+      campfire.fireMesh.scale.set(1 + Math.sin(time * 10) * 0.1, 1 + Math.cos(time * 15) * 0.15, 1 + Math.sin(time * 8) * 0.1);
+
+      if (gameState === 'CUSTOMIZE') {
+        playerModel.position.set(0, 0, 0);
+        playerModel.rotation.y = time * 0.8;
+        camera.position.set(0, 1.4, 3.2);
+        camera.lookAt(0, 1.2, 0);
+        renderer.render(scene, camera);
+        return;
+      }
+
+      if (gameState === 'MENU') {
+        camera.position.set(Math.sin(time * 0.2) * 20, 8, Math.cos(time * 0.2) * 20);
+        camera.lookAt(0, 2, 0);
+        renderer.render(scene, camera);
+        return;
+      }
+
+      // Countdown handling
+      if (gameState === 'COUNTDOWN') {
+        countdownTimer -= delta;
+        if (countdownTimer > 3) {
+          countdownBanner.innerText = "3";
+        } else if (countdownTimer > 2) {
+          countdownBanner.innerText = "2";
+        } else if (countdownTimer > 1) {
+          countdownBanner.innerText = "1";
+        } else if (countdownTimer > 0) {
+          countdownBanner.innerText = "RUN!";
+        } else {
+          countdownBanner.style.display = 'none';
+          gameState = 'PLAYING';
+        }
+      }
+
+      let nearTree = false;
+      for (const tree of trees) {
+        const dx = player.position.x - tree.x;
+        const dz = player.position.z - tree.z;
+        const dist = Math.hypot(dx, dz);
+        
+        if (dist < tree.radius) {
+          const pushOut = (tree.radius - dist);
+          player.position.x += (dx / dist) * pushOut;
+          player.position.z += (dz / dist) * pushOut;
+        }
+
+        if (dist < tree.climbRadius && player.position.y >= tree.minY && player.position.y <= tree.maxY) {
+          nearTree = true;
+        }
+      }
+      player.isClimbing = nearTree;
+
+      const targetSurfaceY = getElevationAt(player.position.x, player.position.z, player.position.y);
+      const groundLevel = targetSurfaceY + player.height;
+
+      const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+      const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+      let moveDir = new THREE.Vector3();
+      if (keys.KeyW) moveDir.add(forward);
+      if (keys.KeyS) moveDir.sub(forward);
+      if (keys.KeyD) moveDir.add(right);
+      if (keys.KeyA) moveDir.sub(right);
+
+      if (moveDir.lengthSq() > 0) {
+        moveDir.normalize();
+        playerModel.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+      }
+
+      player.velocity.x = moveDir.x * speed;
+      player.velocity.z = moveDir.z * speed;
+
+      if (player.isClimbing) {
+        player.velocity.y = 0;
+        if (keys.Space) player.velocity.y = climbSpeed;
+        if (keys.ShiftLeft || keys.ShiftRight) player.velocity.y = -climbSpeed;
+      } else {
+        if (keys.Space && player.onGround) {
+          player.velocity.y = jumpForce;
+          player.onGround = false;
+        }
+        if (!player.onGround) {
+          player.velocity.y += gravity * delta;
+        }
+      }
+
+      player.position.addScaledVector(player.velocity, delta);
+
+      // Clamp player inside boundary walls
+      const boundaryLimit = mapSize / 2 - 4;
+      player.position.x = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.x));
+      player.position.z = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.z));
+
+      if (player.position.y <= groundLevel + 0.05) {
+        player.position.y = groundLevel;
+        player.velocity.y = 0;
+        player.onGround = true;
+      } else {
+        player.onGround = false;
+      }
+
+      playerModel.position.copy(player.position);
+      playerModel.position.y -= player.height;
+
+      const camOffset = new THREE.Vector3(
+        Math.sin(yaw) * Math.cos(pitch) * cameraDistance,
+        Math.sin(pitch) * cameraDistance + 1.2,
+        Math.cos(yaw) * Math.cos(pitch) * cameraDistance
+      );
+
+      camera.position.copy(player.position).add(camOffset);
+      camera.lookAt(player.position.x, player.position.y + 0.5, player.position.z);
+
+      // Enemy AI Update (Only chase if game is in PLAYING state)
+      if (gameState === 'PLAYING') {
+        for (const enemy of enemies) {
+          let botNearTree = false;
+          for (const tree of trees) {
+            const dx = enemy.model.position.x - tree.x;
+            const dz = enemy.model.position.z - tree.z;
+            const dist = Math.hypot(dx, dz);
+
+            if (dist < tree.radius) {
+              const push = (tree.radius - dist);
+              enemy.model.position.x += (dx / dist) * push;
+              enemy.model.position.z += (dz / dist) * push;
+            }
+
+            if (dist < tree.climbRadius && enemy.model.position.y >= tree.minY && enemy.model.position.y <= tree.maxY + 2) {
+              botNearTree = true;
+              break;
+            }
+          }
+          enemy.isClimbing = botNearTree;
+
+          const botGroundLevel = getElevationAt(enemy.model.position.x, enemy.model.position.z, enemy.model.position.y);
+
+          const toPlayer = new THREE.Vector3().subVectors(player.position, enemy.model.position);
+          const dist2D = Math.hypot(toPlayer.x, toPlayer.z);
+
+          if (dist2D > 0.1) {
+            const dirX = toPlayer.x / dist2D;
+            const dirZ = toPlayer.z / dist2D;
+            enemy.model.position.x += dirX * enemy.speed * delta;
+            enemy.model.position.z += dirZ * enemy.speed * delta;
+            enemy.model.rotation.y = Math.atan2(dirX, dirZ);
+          }
+
+          if (player.position.y > enemy.model.position.y + 1.2) {
+            if (enemy.isClimbing) {
+              enemy.model.position.y += enemy.climbSpeed * delta;
+              enemy.velocityY = 0;
+            } else if (enemy.model.position.y <= botGroundLevel + 0.2) {
+              enemy.velocityY = 11;
+            }
+          } else if (enemy.isClimbing && player.position.y < enemy.model.position.y - 1.0) {
+            enemy.model.position.y -= enemy.climbSpeed * delta;
+          }
+
+          if (!enemy.isClimbing && enemy.model.position.y > botGroundLevel) {
+            enemy.velocityY += gravity * delta;
+            enemy.model.position.y += enemy.velocityY * delta;
+          }
+
+          if (enemy.model.position.y <= botGroundLevel) {
+            enemy.model.position.y = botGroundLevel;
+            enemy.velocityY = 0;
+          }
+
+          if (enemy.model.position.distanceTo(player.position) < 1.8) {
+            player.health -= 45 * delta;
+          }
+        }
+      }
+
+      if (player.health <= 0) {
+        returnToMenu();
+      }
+      document.getElementById('health-bar').style.width = player.health + '%';
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
