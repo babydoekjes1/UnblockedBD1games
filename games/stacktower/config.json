@@ -1,7 +1,7 @@
 {
   "entry": "Customstacktower/index.html",
   "mechanics": {
-    "target": 10,
+    "target": 50,
     "perfectThreshold": 0.08,
     "levelStep": 6,
     "baseSpeed": 0.085
